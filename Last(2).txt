@@ -1,0 +1,182 @@
+<!-- أزرار التحكم العلوية -->
+<div class="top-controls">
+    <button class="icon-btn" onclick="toggleAdminMenu()" title="لوحة التحكم">🔑</button>
+    <button class="icon-btn" onclick="toggleDarkMode()">🌙</button>
+</div>
+
+<!-- قائمة المسؤول الرئيسية -->
+<div id="admin-main-menu">
+    <h4 style="margin:0 0 10px 0; text-align:center">لوحة التحكم</h4>
+    <button class="admin-menu-btn" onclick="openLandingEditor()">🖼️ تعديل صور الواجهة</button>
+    <button class="admin-menu-btn" onclick="toggleProductEditor()">🍔 تعديل المنيو والمنتجات</button>
+    <button class="admin-menu-btn" onclick="location.reload()" style="background:#444">🚪 خروج وحفظ</button>
+</div>
+
+<!-- لوحة تعديل الواجهة (منفصلة) -->
+<div id="landing-editor" class="admin-panel">
+    <h4 style="margin-top:0">تعديل صور الواجهة (JPEG)</h4>
+    <label style="font-size:0.8rem">صورة الخلفية الرئيسية:</label>
+    <input type="file" accept=".jpg, .jpeg" onchange="updateLandingImg('bg', this)">
+    <label style="font-size:0.8rem">صورة اللوجو الدائري:</label>
+    <input type="file" accept=".jpg, .jpeg" onchange="updateLandingImg('logo', this)">
+    <button onclick="closeLandingEditor()" style="width:100%; background:var(--primary-color); border:none; padding:8px; border-radius:5px; cursor:pointer">تم</button>
+</div>
+
+<!-- الواجهة الرئيسية -->
+<section id="landing-page">
+    <img src="https://via.placeholder.com/200?text=Logo" id="main-logo">
+    <h1>PHILO FRIES</h1>
+    <p>البطاطس المقرمشة كما يجب أن تكون</p><br>
+    <button class="btn-enter" onclick="showProducts()">عرض قائمة الطعام</button>
+</section>
+
+<!-- صفحة المنتجات -->
+<section id="products-page">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <button onclick="goBack()" style="float: right; background:none; border:none; cursor:pointer; color:var(--text-color)"><i class="fas fa-arrow-right"></i> رجوع</button>
+        <h2 id="page-title">قائمتنا اللذيذة</h2>
+        <div id="edit-notice" class="edit-mode-indicator">وضع التعديل مفعل: يمكنك تغيير الصور والبيانات من الكروت بالأسفل</div>
+        <hr style="width: 50px; border: 2px solid var(--primary-color);">
+    </div>
+    <div class="products-grid" id="product-container"></div>
+</section>
+
+<!-- الأزرار العائمة -->
+<div class="floating-btns">
+    <a href="https://wa.me/201126511633" class="float-btn support-btn"><i class="fas fa-headset"></i></a>
+    <div class="float-btn cart-btn" onclick="alert('السلة ستفتح قريباً')"><i class="fas fa-shopping-basket"></i></div>
+</div>
+
+<script>
+    let products = JSON.parse(localStorage.getItem('philo_products')) || [
+        { id: 0, name: "وجبة فيلو كلاسيك", price: 55, image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400" },
+        { id: 1, name: "فيلو تشيز فرايز", price: 70, image: "https://images.unsplash.com/photo-1585109649139-366815a0d713?w=400" }
+    ];
+
+    let isProductEditMode = false;
+
+    window.onload = function() {
+        if (localStorage.getItem('dark_mode') === 'true') toggleDarkMode();
+        
+        const sBG = localStorage.getItem('philo_bg');
+        if (sBG) document.getElementById('landing-page').style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(${sBG})`;
+        
+        const sLogo = localStorage.getItem('philo_logo');
+        if (sLogo) document.getElementById('main-logo').src = sLogo;
+
+        renderProducts();
+    };
+
+    // --- التحكم في القوائم ---
+    function toggleAdminMenu() {
+        let p = prompt("كلمة مرور المسؤول:");
+        if (p === "2544") {
+            document.getElementById('admin-main-menu').style.display = 'block';
+        }
+    }
+
+    function openLandingEditor() {
+        document.getElementById('landing-editor').style.display = 'block';
+    }
+
+    function closeLandingEditor() {
+        document.getElementById('landing-editor').style.display = 'none';
+    }
+
+    function toggleProductEditor() {
+        isProductEditMode = !isProductEditMode;
+        document.getElementById('edit-notice').style.display = isProductEditMode ? 'block' : 'none';
+        // عند فتح تعديل المنتجات.. نغلق لوحة الواجهة تلقائياً لعدم التداخل
+        closeLandingEditor();
+        renderProducts();
+        if(isProductEditMode) {
+            showProducts(); // ننتقل لصفحة المنتجات لنعدلها
+            alert("يمكنك الآن تعديل صور وبيانات المنتجات مباشرة من الكروت");
+        }
+    }
+
+    // --- تعديل الواجهة (JPEG) ---
+    function updateLandingImg(type, input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (type === 'bg') {
+                    document.getElementById('landing-page').style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(${e.target.result})`;
+                    localStorage.setItem('philo_bg', e.target.result);
+                } else {
+                    document.getElementById('main-logo').src = e.target.result;
+                    localStorage.setItem('philo_logo', e.target.result);
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // --- تعديل المنتجات (JPEG) ---
+    function renderProducts() {
+        const container = document.getElementById('product-container');
+        container.innerHTML = '';
+        products.forEach((p, i) => {
+            container.innerHTML += `
+                <div class="product-card">
+                    <img src="${p.image}" id="prod-img-${i}">
+                    <h3>${p.name}</h3>
+                    <p style="color:var(--primary-color); font-weight:bold">${p.price} جنيه</p>
+                    
+                    ${isProductEditMode ? `
+                        <div style="background:rgba(0,0,0,0.05); padding:10px; border-radius:10px; margin-top:10px">
+                            <label style="font-size:11px">صورة المنتج (JPEG):</label>
+                            <input type="file" accept=".jpg, .jpeg" onchange="changeProdImg(${i}, this)">
+                            <input type="text" value="${p.name}" onchange="updateProdData(${i}, 'name', this.value)" placeholder="الاسم">
+                            <input type="number" value="${p.price}" onchange="updateProdData(${i}, 'price', this.value)" placeholder="السعر">
+                            <button onclick="saveAllProds()" style="background:green; color:white; border:none; padding:5px; width:100%; border-radius:5px; cursor:pointer">حفظ المنتج</button>
+                        </div>
+                    ` : `
+                        <button class="btn-enter" style="padding:10px 20px; font-size:0.9rem" onclick="sendOrder('${p.name}')">طلب الآن</button>
+                    `}
+                </div>
+            `;
+        });
+    }
+
+    function changeProdImg(index, input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                products[index].image = e.target.result;
+                document.getElementById(`prod-img-${index}`).src = e.target.result;
+                saveAllProds();
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function updateProdData(index, field, val) {
+        products[index][field] = val;
+    }
+
+    function saveAllProds() {
+        localStorage.setItem('philo_products', JSON.stringify(products));
+    }
+
+    // --- وظائف عامة ---
+    function showProducts() {
+        document.getElementById('landing-page').style.display = 'none';
+        document.getElementById('products-page').style.display = 'block';
+    }
+
+    function goBack() {
+        document.getElementById('products-page').style.display = 'none';
+        document.getElementById('landing-page').style.display = 'flex';
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('dark_mode', isDark);
+    }
+
+    function sendOrder(name) {
+        window.open(`https://wa.me/201126511633?text=أريد طلب: ${name}`, '_blank');
+    }
+</script>
